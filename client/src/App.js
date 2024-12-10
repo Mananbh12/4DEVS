@@ -160,59 +160,91 @@ function App() {
   };
 
   return (
-    <div className="App">
-      <h1>Gestion des élèves</h1>
+    <div className="min-h-screen bg-gray-100 py-10">
+      <header className="bg-blue-600 text-white p-6 text-center rounded-md shadow-md">
+        <h1 className="text-3xl font-bold">Gestion des Élèves</h1>
+        <p className="text-sm mt-2">
+          Importez et gérez les données de vos élèves.
+        </p>
+      </header>
 
-      {/* Import des élèves */}
-      <section>
-        <h2>Importer un fichier CSV pour les élèves</h2>
-        <input
-          type="file"
-          accept=".csv"
-          onChange={handleFileChange}
-          className="border p-2 m-4"
-        />
-      </section>
+      <main className="mt-10 max-w-4xl mx-auto">
+        <section className="bg-white p-6 rounded-md shadow-md mb-6">
+          <h2 className="text-2xl font-semibold mb-4">
+            Importer un fichier CSV
+          </h2>
+          <label className="block">
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+              className="hidden" // Masquer le champ file par défaut
+              id="file-upload"
+            />
+            <label
+              htmlFor="file-upload"
+              className="cursor-pointer bg-blue-600 text-white font-medium py-2 px-4 rounded-md shadow-md hover:bg-blue-700"
+            >
+              Choisir un fichier
+            </label>
+          </label>
+        </section>
 
-      {/* Import des redoublants */}
-      <section>
-        <h2>Indiquer les redoublants</h2>
-        <input
-          type="file"
-          accept=".csv"
-          onChange={handleRedoublantsFileChange}
-          className="border p-2 m-4"
-        />
-      </section>
+        <section className="bg-white p-6 rounded-md shadow-md mb-6">
+          <h2 className="text-2xl font-semibold mb-4">
+            Indiquer les redoublants
+          </h2>
+          <label className="block">
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleRedoublantsFileChange}
+              className="hidden" // Masquer le champ file par défaut
+              id="redoublants-upload"
+            />
+            <label
+              htmlFor="redoublants-upload"
+              className="cursor-pointer bg-green-600 text-white font-medium py-2 px-4 rounded-md shadow-md hover:bg-green-700"
+            >
+              Choisir un fichier
+            </label>
+          </label>
+        </section>
 
-      {/* Affichage des données importées */}
-      {data.length > 0 && (
-        <table className="table-auto border-collapse border border-gray-400">
-          <thead>
-            <tr>
-              {Object.keys(data[0]).map((header, index) => (
-                <th key={index} className="border border-gray-300 px-4 py-2">
-                  {header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row, rowIndex) => (
-              <tr key={rowIndex}>
-                {Object.values(row).map((cell, cellIndex) => (
-                  <td
-                    key={cellIndex}
-                    className="border border-gray-300 px-4 py-2"
-                  >
-                    {cell}
-                  </td>
+        {data.length > 0 && (
+          <section className="bg-white p-6 rounded-md shadow-md">
+            <h3 className="text-xl font-semibold mb-4">Aperçu des données</h3>
+            <table className="w-full border-collapse border border-gray-400">
+              <thead>
+                <tr>
+                  {Object.keys(data[0]).map((header, index) => (
+                    <th
+                      key={index}
+                      className="border border-gray-300 px-4 py-2 bg-gray-100"
+                    >
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((row, rowIndex) => (
+                  <tr key={rowIndex}>
+                    {Object.values(row).map((cell, cellIndex) => (
+                      <td
+                        key={cellIndex}
+                        className="border border-gray-300 px-4 py-2"
+                      >
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
                 ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+              </tbody>
+            </table>
+          </section>
+        )}
+      </main>
     </div>
   );
 }
