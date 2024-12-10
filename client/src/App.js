@@ -1,52 +1,218 @@
-import "./App.css";
+import React, { useState } from "react";
+import Papa from "papaparse";
+import { parse, isValid, format } from "date-fns";
 
 function App() {
-  return (
-    <div className="font-sans bg-gray-100 min-h-screen">
-      {/* Navbar avec deux boutons */}
-      <nav className="bg-blue-600 p-4 text-white text-center">
-        <button className="bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded-lg mx-2 focus:outline-none">
-          Importer des élèves
-        </button>
-        <button className="bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded-lg mx-2 focus:outline-none">
-          Gérer année suivante
-        </button>
-      </nav>
+  const [file, setFile] = useState(null);
+  const [redoublantsFile, setRedoublantsFile] = useState(null); // Nouveau fichier pour les redoublants
+  const [data, setData] = useState([]);
 
-      {/* Section avec un tableau */}
-      <section className="p-6">
-        <h2 className="text-3xl text-center text-gray-800 mb-6">
-          Liste des étudiants
-        </h2>
-        <div className="overflow-x-auto bg-white p-4 rounded-lg shadow-md">
-          <table className="w-full text-left table-auto">
-            <thead>
-              <tr>
-                <th className="py-2 px-4 text-gray-600">Nom</th>
-                <th className="py-2 px-4 text-gray-600">Prénom</th>
-                <th className="py-2 px-4 text-gray-600">Classe</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-4">John</td>
-                <td className="py-2 px-4">Doe</td>
-                <td className="py-2 px-4">1A</td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-4">Jane</td>
-                <td className="py-2 px-4">Smith</td>
-                <td className="py-2 px-4">2B</td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-4">Mark</td>
-                <td className="py-2 px-4">Johnson</td>
-                <td className="py-2 px-4">3C</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+  // Gestion du fichier des élèves
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    setFile(selectedFile);
+
+    if (selectedFile) {
+      Papa.parse(selectedFile, {
+        complete: (result) => {
+          const formattedData = result.data.map((row) => {
+            const rawDate = row["Date de naissance"]?.trim();
+
+            // Conversion de la date avec `date-fns`
+            let dateDeNaissance = null;
+            try {
+              const parsedDate = parse(rawDate, "dd/MM/yyyy", new Date());
+              if (isValid(parsedDate)) {
+                dateDeNaissance = format(parsedDate, "yyyy-MM-dd");
+              }
+            } catch (error) {
+              console.error("Erreur de format de date :", rawDate, error);
+            }
+
+            return {
+              nom: row["Nom"]?.trim(),
+              prenom: row["Prenom"]?.trim(),
+              dateDeNaissance: dateDeNaissance, // Format correct ou null
+            };
+          });
+
+          setData(formattedData);
+          sendDataToBackend(formattedData); // Envoi des données transformées
+        },
+        header: true,
+        skipEmptyLines: true,
+      });
+    }
+  };
+
+  // Gestion du fichier des redoublants
+  const handleRedoublantsFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    setRedoublantsFile(selectedFile);
+
+    if (selectedFile) {
+      Papa.parse(selectedFile, {
+        complete: (result) => {
+          const formattedData = result.data.map((row) => {
+            const rawDate = row["Date de naissance"]?.trim();
+
+            // Utilisation de date-fns pour parser et valider la date
+            let dateDeNaissance = null;
+            try {
+              // Parse de la date avec le format attendu
+              dateDeNaissance = parse(rawDate, "yyyy-MM-dd", new Date());
+              if (!isValid(dateDeNaissance)) {
+                throw new Error("Date invalide");
+              }
+              // Si valide, formatée pour MongoDB
+              dateDeNaissance = format(dateDeNaissance, "yyyy-MM-dd");
+            } catch (error) {
+              // Si invalide, la date devient null
+              dateDeNaissance = null;
+            }
+
+            return {
+              nom: row["Nom"]?.trim(),
+              prenom: row["Prenom"]?.trim(),
+              dateDeNaissance: dateDeNaissance, // Date formatée ou null
+            };
+          });
+
+          sendRedoublantsToBackend(formattedData);
+          sendRedoublantsFileToBackend(selectedFile);
+        },
+        header: true,
+        skipEmptyLines: true,
+      });
+    }
+  };
+
+  // Envoi des données des élèves au backend
+  const sendDataToBackend = async (students) => {
+    try {
+      const response = await fetch("http://localhost:5000/api/students", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ students }),
+      });
+
+      if (response.ok) {
+        alert("Les élèves ont été enregistrés.");
+      } else {
+        const errorData = await response.json();
+        alert(`Erreur : ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error("Erreur d'envoi au serveur:", error);
+      alert("Une erreur est survenue.");
+    }
+  };
+
+  // Fonction pour envoyer le fichier à Multer (backend)
+  const sendRedoublantsFileToBackend = async (selectedFile) => {
+    const formData = new FormData();
+    formData.append("redoublants", selectedFile);
+
+    try {
+      const response = await fetch("http://localhost:5000/api/update-year", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        alert("Les redoublants ont été enregistrés et l'année mise à jour.");
+      } else {
+        const errorData = await response.json();
+        alert(`Erreur : ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error("Erreur d'envoi au serveur:", error);
+      alert("Une erreur est survenue.");
+    }
+  };
+
+  // Envoi des données formatées des redoublants au backend
+  const sendRedoublantsToBackend = async (redoublants) => {
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/validate-redoublants",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ redoublants }), // Conversion en JSON avant l'envoi
+        }
+      );
+
+      if (response.ok) {
+        alert("Les redoublants ont été validés.");
+      } else {
+        const errorData = await response.json();
+        alert(`Erreur : ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error("Erreur d'envoi des redoublants:", error);
+      alert("Une erreur est survenue.");
+    }
+  };
+
+  return (
+    <div className="App">
+      <h1>Gestion des élèves</h1>
+
+      {/* Import des élèves */}
+      <section>
+        <h2>Importer un fichier CSV pour les élèves</h2>
+        <input
+          type="file"
+          accept=".csv"
+          onChange={handleFileChange}
+          className="border p-2 m-4"
+        />
       </section>
+
+      {/* Import des redoublants */}
+      <section>
+        <h2>Indiquer les redoublants</h2>
+        <input
+          type="file"
+          accept=".csv"
+          onChange={handleRedoublantsFileChange}
+          className="border p-2 m-4"
+        />
+      </section>
+
+      {/* Affichage des données importées */}
+      {data.length > 0 && (
+        <table className="table-auto border-collapse border border-gray-400">
+          <thead>
+            <tr>
+              {Object.keys(data[0]).map((header, index) => (
+                <th key={index} className="border border-gray-300 px-4 py-2">
+                  {header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {Object.values(row).map((cell, cellIndex) => (
+                  <td
+                    key={cellIndex}
+                    className="border border-gray-300 px-4 py-2"
+                  >
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

@@ -11,10 +11,7 @@ async function connectToDatabase() {
     return; // Si déjà connecté, ne rien faire
   }
   try {
-    await mongoose.connect(MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(MONGO_URI, {});
     isConnected = true;
     console.log("Connecté à MongoDB avec Mongoose");
   } catch (error) {
