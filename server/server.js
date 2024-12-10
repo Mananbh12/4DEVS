@@ -46,139 +46,139 @@ function getNextClass(currentClass) {
 
 // Endpoint pour enregistrer les élèves
 app.post("/api/students", async (req, res) => {
-  const students = req.body.students;
-
-  // Définir une date de rentrée par défaut si elle n'est pas spécifiée
+  const { students } = req.body;
   const currentYear = new Date().getFullYear();
-  const defaultDateRentrée = `${currentYear}-09-01`; // 1er septembre de l'année en cours
-  const dateRentrée = req.body.dateRentrée || defaultDateRentrée;
+  const dateRentrée = req.body.dateRentrée || `${currentYear}-09-01`;
+
+  if (!students || students.length === 0) {
+    return res.status(400).json({ message: "Aucun élève à enregistrer." });
+  }
 
   try {
-    if (!students || students.length === 0) {
-      return res.status(400).json({ message: "Aucun élève à enregistrer." });
-    }
-    console.log("Données des étudiants reçues :", students);
+    const savedStudents = [];
+    for (const student of students) {
+      const existingStudent = await Student.findOne({
+        nom: student.nom,
+        prenom: student.prenom,
+        dateDeNaissance: student.dateDeNaissance,
+      });
+      if (existingStudent) continue;
 
-    // Enregistrement des élèves dans la collection `students`
-    const savedStudents = await Student.insertMany(students);
-    console.log("Élèves enregistrés :", savedStudents);
+      const newStudent = new Student(student);
+      const savedStudent = await newStudent.save();
+      savedStudents.push(savedStudent);
 
-    // Gestion des classes : Ajout des élèves dans les collections de classes appropriées
-    for (const student of savedStudents) {
       const className = getClassForStudent(
         student.dateDeNaissance,
         dateRentrée
-      ); // Calcul de la classe de l'élève
-
-      // Vérifiez si la collection de la classe existe
+      );
       let classCollection = await ClassCollection.findOne({
         classe: className,
       });
 
       if (!classCollection) {
-        // Si la classe n'existe pas, créez-la
         classCollection = new ClassCollection({
           classe: className,
           students: [],
         });
       }
 
-      // Ajoutez l'ID de l'élève à la liste des étudiants de la classe
-      classCollection.students.push(student._id);
-      await classCollection.save();
+      if (!classCollection.students.includes(savedStudent._id)) {
+        classCollection.students.push(savedStudent._id);
+        await classCollection.save();
+      }
     }
 
-    res.status(200).json({
-      message: "Élèves enregistrés avec succès",
-      students: savedStudents,
-    });
-  } catch (error) {
-    console.error("Erreur lors de l'enregistrement des élèves :", error);
-    res.status(500).json({
-      message: "Erreur lors de l'enregistrement des élèves",
-      error: error.message,
-    });
+    res
+      .status(200)
+      .json({
+        message: "Élèves enregistrés avec succès.",
+        students: savedStudents,
+      });
+  } catch (err) {
+    console.error(err);
+    res
+      .status(500)
+      .json({ error: "Erreur serveur lors de l'enregistrement des élèves." });
   }
 });
 
 app.post("/api/update-year", upload.single("redoublants"), async (req, res) => {
-  console.log("Fichier reçu :", req.file); // Vérification du fichier
+  if (!req.file) {
+    return res
+      .status(400)
+      .json({ error: "Fichier des redoublants non fourni." });
+  }
 
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "Aucun fichier fourni." });
-    }
-
-    const redoublantsFilePath = req.file.path;
-    const redoublants = [];
-
-    fs.createReadStream(redoublantsFilePath)
-      .pipe(csv())
-      .on("data", (data) => {
-        console.log("Row received:", data);
-
-        const rawDate = data["Date de naissance"];
-        try {
-          const parsedDate = parse(rawDate, "dd/MM/yyyy", new Date());
-          if (isValid(parsedDate)) {
-            data.dateDeNaissance = format(parsedDate, "yyyy-MM-dd");
-          } else {
-            console.error("Date invalide pour :", data);
-            data.dateDeNaissance = null;
-          }
-        } catch (error) {
-          console.error("Erreur de parsing de date :", error);
-          data.dateDeNaissance = null;
-        }
-
-        // Ajoutez uniquement si les données sont valides
-        if (data.Nom && data.Prenom && data.dateDeNaissance) {
-          redoublants.push({
-            nom: data.Nom,
-            prenom: data.Prenom,
-            dateDeNaissance: data.dateDeNaissance,
+  const redoublants = [];
+  fs.createReadStream(req.file.path)
+    .pipe(csv())
+    .on("data", (row) => {
+      const rawDate = row["Date de naissance"];
+      const parsedDate = parse(rawDate, "dd/MM/yyyy", new Date());
+      if (isValid(parsedDate)) {
+        redoublants.push({
+          nom: row["Nom"],
+          prenom: row["Prenom"],
+          dateDeNaissance: format(parsedDate, "yyyy-MM-dd"),
+        });
+      }
+    })
+    .on("end", async () => {
+      try {
+        const processedStudents = [];
+        for (const redoublant of redoublants) {
+          let student = await Student.findOne({
+            nom: redoublant.nom,
+            prenom: redoublant.prenom,
+            dateDeNaissance: new Date(redoublant.dateDeNaissance),
           });
-        }
-      })
-      .on("end", async () => {
-        try {
-          if (redoublants.length === 0) {
-            return res
-              .status(400)
-              .json({
-                error: "Le fichier CSV ne contient aucune donnée valide.",
-              });
+
+          if (!student) {
+            student = new Student(redoublant);
+            await student.save();
           }
 
-          console.log("Redoublants à traiter :", redoublants);
+          const className = getClassForStudent(
+            student.dateDeNaissance,
+            new Date()
+          );
+          let classCollection = await ClassCollection.findOne({
+            classe: className,
+          });
 
-          for (const redoublant of redoublants) {
-            // Trouver l'élève existant ou en créer un
-            let student = await Student.findOne({
-              nom: redoublant.nom,
-              prenom: redoublant.prenom,
-              dateDeNaissance: new Date(redoublant.dateDeNaissance),
+          if (!classCollection) {
+            classCollection = new ClassCollection({
+              classe: className,
+              students: [],
             });
+          }
 
-            if (!student) {
-              student = new Student(redoublant);
-              await student.save();
-            }
+          if (!classCollection.students.includes(student._id)) {
+            classCollection.students.push(student._id);
+            await classCollection.save();
+          }
+          processedStudents.push(student);
+        }
 
-            // Calculer la classe actuelle
-            const currentClass = getClassForStudent(
-              student.dateDeNaissance,
-              new Date()
-            );
+        const allStudents = await Student.find();
+        const promotedStudents = allStudents.filter(
+          (s) => !processedStudents.some((r) => r._id.equals(s._id))
+        );
 
-            // Ajouter l'élève à sa classe
+        for (const student of promotedStudents) {
+          const currentClass = getClassForStudent(
+            student.dateDeNaissance,
+            new Date()
+          );
+          const nextClass = getNextClass(currentClass);
+          if (nextClass) {
             let classCollection = await ClassCollection.findOne({
-              classe: currentClass,
+              classe: nextClass,
             });
-
             if (!classCollection) {
               classCollection = new ClassCollection({
-                classe: currentClass,
+                classe: nextClass,
                 students: [],
               });
             }
@@ -188,19 +188,69 @@ app.post("/api/update-year", upload.single("redoublants"), async (req, res) => {
               await classCollection.save();
             }
           }
-
-          res.status(200).json({
-            message: "Redoublants traités avec succès",
-            redoublants,
-          });
-        } catch (error) {
-          console.error("Erreur lors du traitement des redoublants :", error);
-          res.status(500).json({ error: "Erreur interne du serveur." });
         }
+
+        res.status(200).json({ message: "Mise à jour effectuée." });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Erreur serveur." });
+      }
+    });
+});
+
+app.post("/api/validate-redoublants", async (req, res) => {
+  try {
+    const redoublants = req.body.redoublants;
+
+    if (!redoublants || redoublants.length === 0) {
+      return res.status(400).json({ message: "Aucun redoublant à valider." });
+    }
+
+    const validRedoublants = [];
+    for (const redoublant of redoublants) {
+      const { nom, prenom, dateDeNaissance } = redoublant;
+
+      // Validation des champs obligatoires
+      if (!nom || !prenom || !dateDeNaissance) {
+        console.error(
+          `Données invalides pour le redoublant: ${JSON.stringify(redoublant)}`
+        );
+        continue; // Ignorer ce redoublant
+      }
+
+      // Vérification du format de la date
+      const parsedDate = new Date(dateDeNaissance);
+      if (isNaN(parsedDate)) {
+        console.error(`Date de naissance invalide : ${dateDeNaissance}`);
+        continue; // Ignorer ce redoublant
+      }
+
+      // Recherche ou création de l'élève
+      let student = await Student.findOne({
+        nom,
+        prenom,
+        dateDeNaissance: parsedDate,
       });
+
+      if (!student) {
+        student = new Student({ nom, prenom, dateDeNaissance: parsedDate });
+        await student.save();
+      }
+
+      validRedoublants.push(student);
+    }
+
+    res.status(200).json({
+      message: "Redoublants validés et traités.",
+      validRedoublants: validRedoublants.map((s) => ({
+        nom: s.nom,
+        prenom: s.prenom,
+        dateDeNaissance: s.dateDeNaissance,
+      })),
+    });
   } catch (error) {
-    console.error("Erreur lors du traitement du fichier :", error);
-    res.status(500).json({ error: "Erreur lors du traitement du fichier." });
+    console.error("Erreur lors de la validation des redoublants :", error);
+    res.status(500).json({ message: "Erreur interne." });
   }
 });
 

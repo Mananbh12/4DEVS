@@ -56,30 +56,30 @@ function App() {
           const formattedData = result.data.map((row) => {
             const rawDate = row["Date de naissance"]?.trim();
 
-            // Utilisation de date-fns pour parser et valider la date
             let dateDeNaissance = null;
             try {
-              // Parse de la date avec le format attendu
-              dateDeNaissance = parse(rawDate, "yyyy-MM-dd", new Date());
-              if (!isValid(dateDeNaissance)) {
-                throw new Error("Date invalide");
+              const parsedDate = parse(rawDate, "dd/MM/yyyy", new Date()); // Remplacez par le format de vos données
+              if (isValid(parsedDate)) {
+                dateDeNaissance = format(parsedDate, "yyyy-MM-dd");
+              } else {
+                console.error(`Date invalide détectée : ${rawDate}`);
               }
-              // Si valide, formatée pour MongoDB
-              dateDeNaissance = format(dateDeNaissance, "yyyy-MM-dd");
             } catch (error) {
-              // Si invalide, la date devient null
-              dateDeNaissance = null;
+              console.error(
+                "Erreur lors du parsing de la date :",
+                rawDate,
+                error
+              );
             }
 
             return {
               nom: row["Nom"]?.trim(),
               prenom: row["Prenom"]?.trim(),
-              dateDeNaissance: dateDeNaissance, // Date formatée ou null
+              dateDeNaissance: dateDeNaissance, // Null si invalide
             };
           });
 
-          sendRedoublantsToBackend(formattedData);
-          sendRedoublantsFileToBackend(selectedFile);
+          sendRedoublantsToBackend(formattedData); // Envoyer uniquement les données valides
         },
         header: true,
         skipEmptyLines: true,
@@ -129,7 +129,7 @@ function App() {
       }
     } catch (error) {
       console.error("Erreur d'envoi au serveur:", error);
-      alert("Une erreur est survenue.");
+      alert("Une erreur est survenue dans la route api/update-year.");
     }
   };
 
@@ -155,7 +155,7 @@ function App() {
       }
     } catch (error) {
       console.error("Erreur d'envoi des redoublants:", error);
-      alert("Une erreur est survenue.");
+      alert("Une erreur est survenue avec la route validate-redoublants.");
     }
   };
 

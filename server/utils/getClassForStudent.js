@@ -1,32 +1,26 @@
-const { differenceInYears } = require("date-fns");
-
 function getClassForStudent(dateDeNaissance, dateRentrée) {
-  const age = differenceInYears(
-    new Date(dateRentrée),
-    new Date(dateDeNaissance)
-  );
+  const rentréeDate = new Date(dateRentrée);
+  const birthDate = new Date(dateDeNaissance);
 
-  if (age < 3) {
-    return "Non éligible";
-  } else if (age === 3) {
-    return "Petite Section";
-  } else if (age === 4) {
-    return "Moyenne Section";
-  } else if (age === 5) {
-    return "Grande Section";
-  } else if (age === 6) {
-    return "CP";
-  } else if (age === 7) {
-    return "CE1";
-  } else if (age === 8) {
-    return "CE2";
-  } else if (age === 9) {
-    return "CM1";
-  } else if (age === 10) {
-    return "CM2";
-  } else {
-    return "Non éligible";
-  }
+  const ageOnRentrée =
+    rentréeDate.getFullYear() -
+    birthDate.getFullYear() -
+    (rentréeDate.getMonth() < birthDate.getMonth() ||
+    (rentréeDate.getMonth() === birthDate.getMonth() &&
+      rentréeDate.getDate() < birthDate.getDate())
+      ? 1
+      : 0);
+
+  if (ageOnRentrée === 3) return "Petite Section";
+  if (ageOnRentrée === 4) return "Moyenne Section";
+  if (ageOnRentrée === 5) return "Grande Section";
+  if (ageOnRentrée === 6) return "CP";
+  if (ageOnRentrée === 7) return "CE1";
+  if (ageOnRentrée === 8) return "CE2";
+  if (ageOnRentrée === 9) return "CM1";
+  if (ageOnRentrée === 10) return "CM2";
+
+  return null; // Cas d'âge en dehors du cycle scolaire
 }
 
 module.exports = getClassForStudent;
