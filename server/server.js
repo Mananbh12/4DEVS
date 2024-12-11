@@ -85,7 +85,7 @@ app.get("/api/preinscrits", async (req, res) => {
 
 // Endpoint pour enregistrer les préinscrits
 app.post("/api/preinscrits", upload.single("preinscrit"), async (req, res) => {
-  console.log(req.file); // Vérifier ce qui est reçu
+  // console.log(req.file); // Vérifier ce qui est reçu
 
   if (!req.file) {
     return res.status(400).json({ message: "Aucun fichier reçu." });
@@ -93,7 +93,7 @@ app.post("/api/preinscrits", upload.single("preinscrit"), async (req, res) => {
 
   try {
     const preinscritFile = req.file.buffer.toString("utf-8");
-    console.log("Contenu du fichier:", preinscritFile); // Affichez le contenu du fichier
+    // console.log("Contenu du fichier:", preinscritFile); // Affichez le contenu du fichier
 
     const lines = preinscritFile.split("\n");
     const students = [];

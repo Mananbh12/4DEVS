@@ -255,64 +255,119 @@ function App() {
       </header>
 
       <main className="mt-10 max-w-7xl mx-auto">
-        {/* Import des présinscrit */}
-        <section>
-          <h2>Importer un fichier CSV pour les présinscrits</h2>
-          <input
-            type="file"
-            accept=".txt"
-            onChange={addPreinscrit}
-            className="border p-2 m-4"
-          />
+        {/* Import des fichiers */}
+        <section className="mb-10">
+          <h2 className="text-xl font-semibold mb-6 text-center">
+            Importer des fichiers :
+          </h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {/* Champ pour les préinscrits */}
+            <div className="flex flex-col items-center bg-white p-6 rounded-md shadow-md">
+              <h3 className="text-lg font-semibold mb-4">Préinscrits</h3>
+              <input
+                type="file"
+                accept=".txt"
+                onChange={addPreinscrit}
+                id="preinscrit-upload"
+                className="hidden"
+              />
+              <label
+                htmlFor="preinscrit-upload"
+                className="cursor-pointer bg-indigo-600 text-white py-2 px-4 rounded-md shadow-md hover:bg-indigo-700"
+              >
+                Choisir un fichier texte
+              </label>
+            </div>
+
+            {/* Champ pour les étudiants */}
+            <div className="flex flex-col items-center bg-white p-6 rounded-md shadow-md">
+              <h3 className="text-lg font-semibold mb-4">Élèves</h3>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleFileChange}
+                id="file-upload"
+                className="hidden"
+              />
+              <label
+                htmlFor="file-upload"
+                className="cursor-pointer bg-blue-600 text-white py-2 px-4 rounded-md shadow-md hover:bg-blue-700"
+              >
+                Choisir un fichier csv
+              </label>
+            </div>
+
+            {/* Champ pour les redoublants */}
+            <div className="flex flex-col items-center bg-white p-6 rounded-md shadow-md">
+              <h3 className="text-lg font-semibold mb-4">Redoublants</h3>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleRedoublantsFileChange}
+                id="redoublants-upload"
+                className="hidden"
+              />
+              <label
+                htmlFor="redoublants-upload"
+                className="cursor-pointer bg-green-600 text-white py-2 px-4 rounded-md shadow-md hover:bg-green-700"
+              >
+                Choisir un fichier csv
+              </label>
+            </div>
+          </div>
         </section>
 
-        {/* Encadrés côte à côte */}
-        <div className="flex justify-between gap-6 mb-10">
-          <section className="flex-1 bg-white p-6 rounded-md shadow-md">
-            <h2 className="text-2xl font-semibold mb-4">
-              Importer un fichier CSV
-            </h2>
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleFileChange}
-              className="hidden"
-              id="file-upload"
-            />
-            <label
-              htmlFor="file-upload"
-              className="cursor-pointer bg-blue-600 text-white font-medium py-2 px-4 rounded-md shadow-md hover:bg-blue-700"
-            >
-              Choisir un fichier
-            </label>
-          </section>
+        {/* Tableaux des classes */}
+        <section>
+          <div className="grid grid-cols-3 gap-6">
+            {classes.map((classItem, classIndex) => (
+              <div
+                key={classIndex}
+                className="bg-white p-4 rounded-md shadow-md"
+              >
+                <h3 className="text-xl font-bold mb-2">{classItem.classe}</h3>
+                {classItem.students.length > 0 ? (
+                  <table className="w-full border-collapse border border-gray-400">
+                    <thead>
+                      <tr>
+                        <th className="border border-gray-300 px-4 py-2 bg-gray-100">
+                          Nom
+                        </th>
+                        <th className="border border-gray-300 px-4 py-2 bg-gray-100">
+                          Prénom
+                        </th>
+                        <th className="border border-gray-300 px-4 py-2 bg-gray-100">
+                          Date de naissance
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {classItem.students.map((student, studentIndex) => (
+                        <tr key={studentIndex}>
+                          <td className="border border-gray-300 px-4 py-2">
+                            {student.nom}
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            {student.prenom}
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            {student.dateDeNaissance}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p>Aucun étudiant dans cette classe.</p>
+                )}
+              </div>
+            ))}
 
-          <section className="flex-1 bg-white p-6 rounded-md shadow-md">
-            <h2 className="text-2xl font-semibold mb-4">
-              Indiquer les redoublants
-            </h2>
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleRedoublantsFileChange}
-              className="hidden"
-              id="redoublants-upload"
-            />
-            <label
-              htmlFor="redoublants-upload"
-              className="cursor-pointer bg-green-600 text-white font-medium py-2 px-4 rounded-md shadow-md hover:bg-green-700"
-            >
-              Choisir un fichier
-            </label>
-          </section>
-        </div>
-
-        {/* Tableaux en grille */}
-        <div className="grid grid-cols-3 gap-6">
-          {classes.map((classItem, classIndex) => (
-            <div key={classIndex} className="bg-white p-4 rounded-md shadow-md">
-              <h3 className="text-xl font-bold mb-2">{classItem.classe}</h3>
-              {classItem.students.length > 0 ? (
+            {/* Tableau des préinscrits */}
+            <div className="bg-white p-4 rounded-md shadow-md">
+              <h3 className="text-xl font-bold mb-2">Préinscrits</h3>
+              {preinscrits.length > 0 ? (
                 <table className="w-full border-collapse border border-gray-400">
                   <thead>
                     <tr>
@@ -328,8 +383,8 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {classItem.students.map((student, studentIndex) => (
-                      <tr key={studentIndex}>
+                    {preinscrits.map((student, index) => (
+                      <tr key={index}>
                         <td className="border border-gray-300 px-4 py-2">
                           {student.nom}
                         </td>
@@ -344,50 +399,11 @@ function App() {
                   </tbody>
                 </table>
               ) : (
-                <p>Aucun étudiant dans cette classe.</p>
+                <p>Aucun préinscrit pour le moment.</p>
               )}
             </div>
-          ))}
-
-          {/* Ajoutez un tableau pour les préinscrits */}
-          <div className="bg-white p-4 rounded-md shadow-md">
-            <h3 className="text-xl font-bold mb-2">Préinscrits</h3>
-            {preinscrits.length > 0 ? (
-              <table className="w-full border-collapse border border-gray-400">
-                <thead>
-                  <tr>
-                    <th className="border border-gray-300 px-4 py-2 bg-gray-100">
-                      Nom
-                    </th>
-                    <th className="border border-gray-300 px-4 py-2 bg-gray-100">
-                      Prénom
-                    </th>
-                    <th className="border border-gray-300 px-4 py-2 bg-gray-100">
-                      Date de naissance
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {preinscrits.map((student, index) => (
-                    <tr key={index}>
-                      <td className="border border-gray-300 px-4 py-2">
-                        {student.nom}
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2">
-                        {student.prenom}
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2">
-                        {student.dateDeNaissance}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <p>Aucun préinscrit pour le moment.</p>
-            )}
           </div>
-        </div>
+        </section>
       </main>
     </div>
   );
