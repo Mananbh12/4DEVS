@@ -9,6 +9,7 @@ const upload = multer({ dest: "uploads/" });
 const Student = require("./models/Student");
 const ClassCollection = require("./models/ClassCollection");
 const getClassForStudent = require("./utils/getClassForStudent");
+const { fr } = require('date-fns/locale');
 
 const app = express();
 app.use(cors());
@@ -28,6 +29,8 @@ mongoose
   })
   .then(() => console.log("Connecté à MongoDB"))
   .catch((error) => console.log("Erreur de connexion à MongoDB", error));
+
+
 
 function getNextClass(currentClass) {
   const classes = [
@@ -100,6 +103,77 @@ app.post("/api/students", async (req, res) => {
     });
   }
 });
+
+
+
+
+app.post("/api/preinscrit", async (req, res) => {
+  const preinscritFile = req.body.preinscrit; // Recevez le fichier au format texte
+  console.log("Entrée POST");
+
+  try {
+    if (!preinscritFile) {
+      console.log("Aucun fichier reçu.");
+      return res.status(400).json({ message: "Aucun fichier reçu." });
+    }
+
+    console.log("Fichier reçu :", preinscritFile);
+
+    // Convertir le fichier texte en JSON
+    const lines = preinscritFile.split("\n");
+    console.log("Lignes découpées :", lines);
+
+    const students = [];
+
+    for (const line of lines) {
+      const parts = line.trim().split(" ");
+      console.log("Parties découpées de la ligne :", parts);
+
+      if (parts.length >= 5) {
+        const nom = parts[0];
+        const prenom = parts[1];
+        const dateDeNaissanceStr = parts.slice(2).join(" ");
+
+        try {
+          // Conversion de la date
+          const dateDeNaissance = parse(dateDeNaissanceStr, 'dd MMMM yyyy', new Date(), { locale: fr });
+
+          if (isValid(dateDeNaissance)) {
+            students.push({
+              nom,
+              prenom,
+              dateDeNaissance: dateDeNaissance.toISOString(),
+            });
+            console.log(`Étudiant ajouté : ${nom} ${prenom} - Date de naissance : ${dateDeNaissanceStr}`);
+          } else {
+            console.error(`Date invalide : ${dateDeNaissanceStr}`);
+          }
+        } catch (dateError) {
+          console.error(`Erreur lors du parsing de la date : ${dateDeNaissanceStr}`, dateError);
+        }
+      } else {
+        console.error(`Ligne incorrecte : ${line}`);
+      }
+    }
+
+    // Enregistrement des préinscrits dans la collection `students`
+    console.log("Enregistrement des étudiants en cours...");
+    const savedPreinscrit = await Student.insertMany(students);
+    console.log("Préinscrits enregistrés :", savedPreinscrit);
+
+    res.status(200).json({
+      message: "Préinscrits enregistrés avec succès",
+      students: savedPreinscrit,
+    });
+  } catch (error) {
+    console.error("Erreur lors de l'enregistrement des préinscrits :", error);
+    res.status(500).json({
+      message: "Erreur lors de l'enregistrement des préinscrits",
+      error: error.message,
+    });
+  }
+});
+
 
 app.post("/api/update-year", upload.single("redoublants"), async (req, res) => {
   console.log("Fichier reçu :", req.file); // Vérification du fichier
@@ -204,7 +278,84 @@ app.post("/api/update-year", upload.single("redoublants"), async (req, res) => {
   }
 });
 
+app.post("/api/validate-redoublants", async (req, res) => {
+  try {
+    const redoublants = req.body.redoublants; // Les redoublants envoyés depuis le frontend
+
+    // Vérification de la validité des données
+    if (!redoublants || redoublants.length === 0) {
+      return res.status(400).json({ message: "Aucun redoublant à valider." });
+    }
+
+    const validRedoublants = [];
+
+    for (const redoublant of redoublants) {
+      const { nom, prenom, dateDeNaissance } = redoublant;
+
+      // Validation des informations
+      if (!nom || !prenom || !dateDeNaissance) {
+        console.error(`Données invalides pour le redoublant: ${redoublant}`);
+        continue; // Ignorez ce redoublant si des informations sont manquantes
+      }
+
+      // Recherche de l'élève dans la base de données
+      let student = await Student.findOne({
+        nom: nom,
+        prenom: prenom,
+        dateDeNaissance: new Date(dateDeNaissance),
+      });
+
+      if (!student) {
+        // Si l'élève n'existe pas, créez un nouvel enregistrement
+        student = new Student({
+          nom: nom,
+          prenom: prenom,
+          dateDeNaissance: new Date(dateDeNaissance),
+        });
+        await student.save();
+        console.log(`Élève créé : ${nom} ${prenom}`);
+      }
+
+      // Ajout de l'élève à la liste des redoublants validés
+      validRedoublants.push(student);
+
+      // Ajouter à la classe actuelle du redoublant
+      const currentClass = getClassForStudent(student.dateDeNaissance, new Date());
+
+      let classCollection = await ClassCollection.findOne({ classe: currentClass });
+
+      if (!classCollection) {
+        classCollection = new ClassCollection({ classe: currentClass, students: [] });
+      }
+
+      // Ajouter l'ID de l'élève à la collection de la classe
+      if (!classCollection.students.includes(student._id)) {
+        classCollection.students.push(student._id);
+        await classCollection.save();
+        console.log(`Élève ajouté à la classe ${currentClass}`);
+      }
+    }
+
+    // Retourner la réponse au frontend avec les redoublants validés
+    res.status(200).json({
+      message: "Redoublants validés et traités avec succès.",
+      validRedoublants: validRedoublants.map(student => ({
+        nom: student.nom,
+        prenom: student.prenom,
+        dateDeNaissance: student.dateDeNaissance,
+      })),
+    });
+
+  } catch (error) {
+    console.error("Erreur lors de la validation des redoublants:", error);
+    res.status(500).json({
+      message: "Erreur interne lors de la validation des redoublants.",
+      error: error.message,
+    });
+  }
+});
+
 // Lancer le serveur
-app.listen(5000, () => {
-  console.log("Serveur démarré sur http://localhost:5000");
+app.listen(3000, () => {
+  console.log("Serveur démarré sur http://localhost:3000");
 });
