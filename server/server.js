@@ -9,6 +9,7 @@ const upload = multer({ dest: "uploads/" });
 const Student = require("./models/Student");
 const ClassCollection = require("./models/ClassCollection");
 const getClassForStudent = require("./utils/getClassForStudent");
+const { fr } = require('date-fns/locale');
 
 const app = express();
 app.use(cors());
@@ -43,6 +44,74 @@ function getNextClass(currentClass) {
   const index = classes.indexOf(currentClass);
   return index >= 0 && index < classes.length - 1 ? classes[index + 1] : null;
 }
+
+// Endpoint pour enregistrer les préinscrits
+app.post("/api/preinscrit", async (req, res) => {
+  const preinscritFile = req.body.preinscrit; // Recevez le fichier au format texte
+  console.log("Entrée POST");
+
+  try {
+    if (!preinscritFile) {
+      console.log("Aucun fichier reçu.");
+      return res.status(400).json({ message: "Aucun fichier reçu." });
+    }
+
+    console.log("Fichier reçu :", preinscritFile);
+
+    // Convertir le fichier texte en JSON
+    const lines = preinscritFile.split("\n");
+    console.log("Lignes découpées :", lines);
+
+    const students = [];
+
+    for (const line of lines) {
+      const parts = line.trim().split(" ");
+      console.log("Parties découpées de la ligne :", parts);
+
+      if (parts.length >= 5) {
+        const nom = parts[0];
+        const prenom = parts[1];
+        const dateDeNaissanceStr = parts.slice(2).join(" ");
+
+        try {
+          // Conversion de la date
+          const dateDeNaissance = parse(dateDeNaissanceStr, 'dd MMMM yyyy', new Date(), { locale: fr });
+
+          if (isValid(dateDeNaissance)) {
+            students.push({
+              nom,
+              prenom,
+              dateDeNaissance: dateDeNaissance.toISOString(),
+            });
+            console.log(`Étudiant ajouté : ${nom} ${prenom} - Date de naissance : ${dateDeNaissanceStr}`);
+          } else {
+            console.error(`Date invalide : ${dateDeNaissanceStr}`);
+          }
+        } catch (dateError) {
+          console.error(`Erreur lors du parsing de la date : ${dateDeNaissanceStr}`, dateError);
+        }
+      } else {
+        console.error(`Ligne incorrecte : ${line}`);
+      }
+    }
+
+    // Enregistrement des préinscrits dans la collection `students`
+    console.log("Enregistrement des étudiants en cours...");
+    const savedPreinscrit = await Student.insertMany(students);
+    console.log("Préinscrits enregistrés :", savedPreinscrit);
+
+    res.status(200).json({
+      message: "Préinscrits enregistrés avec succès",
+      students: savedPreinscrit,
+    });
+  } catch (error) {
+    console.error("Erreur lors de l'enregistrement des préinscrits :", error);
+    res.status(500).json({
+      message: "Erreur lors de l'enregistrement des préinscrits",
+      error: error.message,
+    });
+  }
+});
 
 // Endpoint pour enregistrer les élèves
 app.post("/api/students", async (req, res) => {
@@ -100,6 +169,20 @@ app.post("/api/students", async (req, res) => {
     res
       .status(500)
       .json({ error: "Erreur serveur lors de l'enregistrement des élèves." });
+  }
+});
+
+// Endpoint pour récupérer les élèves par classe
+app.get("/api/classes", async (req, res) => {
+  try {
+    const classes = await ClassCollection.find()
+      .populate("students") // Assure que les IDs dans `students` sont remplacés par leurs documents complets
+      .exec();
+
+    res.status(200).json(classes);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des classes :", error);
+    res.status(500).json({ message: "Erreur interne du serveur." });
   }
 });
 
