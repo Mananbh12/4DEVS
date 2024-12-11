@@ -4,8 +4,10 @@ import { parse, isValid, format } from "date-fns";
 
 function App() {
   const [file, setFile] = useState(null);
+  const [preinscritFile, setPreinscritFile] = useState(null);
   const [redoublantsFile, setRedoublantsFile] = useState(null); // Nouveau fichier pour les redoublants
   const [data, setData] = useState([]);
+  const [preinscrit, setPreinscrit] = useState([]);
 
   // Gestion du fichier des élèves
   const handleFileChange = (e) => {
@@ -90,7 +92,7 @@ function App() {
   // Envoi des données des élèves au backend
   const sendDataToBackend = async (students) => {
     try {
-      const response = await fetch("http://localhost:5000/api/students", {
+      const response = await fetch("http://localhost:3000/api/students", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -116,7 +118,7 @@ function App() {
     formData.append("redoublants", selectedFile);
 
     try {
-      const response = await fetch("http://localhost:5000/api/update-year", {
+      const response = await fetch("http://localhost:3000/api/update-year", {
         method: "POST",
         body: formData,
       });
@@ -137,7 +139,7 @@ function App() {
   const sendRedoublantsToBackend = async (redoublants) => {
     try {
       const response = await fetch(
-        "http://localhost:5000/api/validate-redoublants",
+        "http://localhost:3000/api/validate-redoublants",
         {
           method: "POST",
           headers: {
@@ -158,6 +160,56 @@ function App() {
       alert("Une erreur est survenue.");
     }
   };
+
+
+  const addPreinscrit = (e) => {
+    const selectedFile = e.target.files[0];
+    setPreinscritFile(selectedFile);
+    sendPreinscritToBackend(selectedFile);
+  };  
+
+  const sendPreinscritToBackend = async (file) => {
+    const reader = new FileReader();
+  
+    reader.onload = async (e) => {
+      const fileContent = e.target.result; // Contenu du fichier
+      console.log("Contenu du fichier préinscrit :", fileContent); // Affiche le contenu dans la console
+  
+      const preinscrit = (fileContent); 
+  
+      try {
+        const response = await fetch("http://localhost:3000/api/preinscrit", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ preinscrit }),
+        });
+  
+        if (response.ok) {
+
+          alert("Les préinscrits ont été enregistrés.");
+        } else {
+
+          const errorData = await response.json();
+          alert(`Erreur : ${errorData.message}`);
+        }
+      } catch (error) {
+        console.error("Erreur d'envoi au serveur:", error);
+        alert("Une erreur est survenue.");
+      }
+    };
+  
+    reader.readAsText(file); // Lit le fichier comme du texte
+  };
+  
+  
+
+
+  
+
+  
+
 
   return (
     <div className="App">
@@ -181,6 +233,17 @@ function App() {
           type="file"
           accept=".csv"
           onChange={handleRedoublantsFileChange}
+          className="border p-2 m-4"
+        />
+      </section>
+
+      {/* Import des présinscrit */}
+      <section>
+        <h2>Importer un fichier CSV pour les présinscrits</h2>
+        <input
+          type="file"
+          accept=".txt"
+          onChange={addPreinscrit}
           className="border p-2 m-4"
         />
       </section>
