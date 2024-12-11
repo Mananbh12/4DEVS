@@ -160,7 +160,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-10">
+    <div className="min-h-screen bg-transparent">
       <header className="bg-blue-600 text-white p-6 text-center rounded-md shadow-md">
         <h1 className="text-3xl font-bold">Gestion des Élèves</h1>
         <p className="text-sm mt-2">
@@ -168,7 +168,7 @@ function App() {
         </p>
       </header>
 
-      <main className="mt-10 max-w-4xl mx-auto">
+      <main className="mt-10 max-w-4xl mx-auto bg-transparent">
         <section className="bg-white p-6 rounded-md shadow-md mb-6">
           <h2 className="text-2xl font-semibold mb-4">
             Importer un fichier CSV
