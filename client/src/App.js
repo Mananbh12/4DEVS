@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
 import { parse, isValid, format } from "date-fns";
 
@@ -6,6 +6,83 @@ function App() {
   const [file, setFile] = useState(null);
   const [redoublantsFile, setRedoublantsFile] = useState(null); // Nouveau fichier pour les redoublants
   const [data, setData] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [preinscrit, setPreinscrit] = useState([]);
+  const [preinscritFile, setPreinscritFile] = useState(null);
+
+  useEffect(() => {
+    fetchClasses();
+  }, []);
+
+  const addPreinscrit = (e) => {
+    const selectedFile = e.target.files[0];
+    setPreinscritFile(selectedFile);
+    sendPreinscritToBackend(selectedFile);
+  };
+
+  const sendPreinscritToBackend = async (file) => {
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+      const fileContent = e.target.result; // Contenu du fichier
+      console.log("Contenu du fichier préinscrit :", fileContent); // Affiche le contenu dans la console
+
+      const preinscrit = fileContent;
+
+      try {
+        const response = await fetch("http://localhost:5000/api/preinscrit", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ preinscrit }),
+        });
+
+        if (response.ok) {
+          alert("Les préinscrits ont été enregistrés.");
+        } else {
+          const errorData = await response.json();
+          alert(`Erreur : ${errorData.message}`);
+        }
+      } catch (error) {
+        console.error("Erreur d'envoi au serveur:", error);
+        alert("Une erreur est survenue.");
+      }
+    };
+
+    reader.readAsText(file); // Lit le fichier comme du texte
+  };
+
+  // Récupération des classes du backend
+  const fetchClasses = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/api/classes");
+      if (response.ok) {
+        const classData = await response.json();
+
+        // Trier les classes dans l'ordre désiré
+        const order = [
+          "Petite section",
+          "Moyenne section",
+          "Grande section",
+          "CP",
+          "CE1",
+          "CE2",
+          "CM1",
+          "CM2",
+        ];
+
+        const sortedClasses = classData.sort(
+          (a, b) => order.indexOf(a.classe) - order.indexOf(b.classe)
+        );
+        setClasses(sortedClasses);
+      } else {
+        console.error("Erreur lors de la récupération des classes");
+      }
+    } catch (error) {
+      console.error("Erreur lors de la connexion au serveur :", error);
+    }
+  };
 
   // Gestion du fichier des élèves
   const handleFileChange = (e) => {
@@ -168,17 +245,29 @@ function App() {
         </p>
       </header>
 
-      <main className="mt-10 max-w-4xl mx-auto">
-        <section className="bg-white p-6 rounded-md shadow-md mb-6">
-          <h2 className="text-2xl font-semibold mb-4">
-            Importer un fichier CSV
-          </h2>
-          <label className="block">
+      <main className="mt-10 max-w-7xl mx-auto">
+        {/* Import des présinscrit */}
+        <section>
+          <h2>Importer un fichier CSV pour les présinscrits</h2>
+          <input
+            type="file"
+            accept=".txt"
+            onChange={addPreinscrit}
+            className="border p-2 m-4"
+          />
+        </section>
+
+        {/* Encadrés côte à côte */}
+        <div className="flex justify-between gap-6 mb-10">
+          <section className="flex-1 bg-white p-6 rounded-md shadow-md">
+            <h2 className="text-2xl font-semibold mb-4">
+              Importer un fichier CSV
+            </h2>
             <input
               type="file"
               accept=".csv"
               onChange={handleFileChange}
-              className="hidden" // Masquer le champ file par défaut
+              className="hidden"
               id="file-upload"
             />
             <label
@@ -187,19 +276,17 @@ function App() {
             >
               Choisir un fichier
             </label>
-          </label>
-        </section>
+          </section>
 
-        <section className="bg-white p-6 rounded-md shadow-md mb-6">
-          <h2 className="text-2xl font-semibold mb-4">
-            Indiquer les redoublants
-          </h2>
-          <label className="block">
+          <section className="flex-1 bg-white p-6 rounded-md shadow-md">
+            <h2 className="text-2xl font-semibold mb-4">
+              Indiquer les redoublants
+            </h2>
             <input
               type="file"
               accept=".csv"
               onChange={handleRedoublantsFileChange}
-              className="hidden" // Masquer le champ file par défaut
+              className="hidden"
               id="redoublants-upload"
             />
             <label
@@ -208,42 +295,51 @@ function App() {
             >
               Choisir un fichier
             </label>
-          </label>
-        </section>
-
-        {data.length > 0 && (
-          <section className="bg-white p-6 rounded-md shadow-md">
-            <h3 className="text-xl font-semibold mb-4">Aperçu des données</h3>
-            <table className="w-full border-collapse border border-gray-400">
-              <thead>
-                <tr>
-                  {Object.keys(data[0]).map((header, index) => (
-                    <th
-                      key={index}
-                      className="border border-gray-300 px-4 py-2 bg-gray-100"
-                    >
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {data.map((row, rowIndex) => (
-                  <tr key={rowIndex}>
-                    {Object.values(row).map((cell, cellIndex) => (
-                      <td
-                        key={cellIndex}
-                        className="border border-gray-300 px-4 py-2"
-                      >
-                        {cell}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </section>
-        )}
+        </div>
+
+        {/* Tableaux en grille */}
+        <div className="grid grid-cols-3 gap-6">
+          {classes.map((classItem, classIndex) => (
+            <div key={classIndex} className="bg-white p-4 rounded-md shadow-md">
+              <h3 className="text-xl font-bold mb-2">{classItem.classe}</h3>
+              {classItem.students.length > 0 ? (
+                <table className="w-full border-collapse border border-gray-400">
+                  <thead>
+                    <tr>
+                      <th className="border border-gray-300 px-4 py-2 bg-gray-100">
+                        Nom
+                      </th>
+                      <th className="border border-gray-300 px-4 py-2 bg-gray-100">
+                        Prénom
+                      </th>
+                      <th className="border border-gray-300 px-4 py-2 bg-gray-100">
+                        Date de naissance
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {classItem.students.map((student, studentIndex) => (
+                      <tr key={studentIndex}>
+                        <td className="border border-gray-300 px-4 py-2">
+                          {student.nom}
+                        </td>
+                        <td className="border border-gray-300 px-4 py-2">
+                          {student.prenom}
+                        </td>
+                        <td className="border border-gray-300 px-4 py-2">
+                          {student.dateDeNaissance}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p>Aucun étudiant dans cette classe.</p>
+              )}
+            </div>
+          ))}
+        </div>
       </main>
     </div>
   );
