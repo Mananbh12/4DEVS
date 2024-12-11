@@ -5,11 +5,13 @@ const fs = require("fs");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const { parse, isValid, format } = require("date-fns");
-const upload = multer({ dest: "uploads/" });
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 const Student = require("./models/Student");
 const ClassCollection = require("./models/ClassCollection");
 const getClassForStudent = require("./utils/getClassForStudent");
-const { fr } = require('date-fns/locale');
+const isPreinscrit = require("./utils/isPreinscrit");
+const { fr } = require("date-fns/locale");
 
 const app = express();
 app.use(cors());
@@ -45,37 +47,72 @@ function getNextClass(currentClass) {
   return index >= 0 && index < classes.length - 1 ? classes[index + 1] : null;
 }
 
-// Endpoint pour enregistrer les préinscrits
-app.post("/api/preinscrit", async (req, res) => {
-  const preinscritFile = req.body.preinscrit; // Recevez le fichier au format texte
-  console.log("Entrée POST");
+// Endpoint pour récupérer les élèves par classe
+app.get("/api/classes", async (req, res) => {
+  try {
+    const classes = await ClassCollection.find()
+      .populate("students") // Assure que les IDs dans `students` sont remplacés par leurs documents complets
+      .exec();
+
+    res.status(200).json(classes);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des classes :", error);
+    res.status(500).json({ message: "Erreur interne du serveur." });
+  }
+});
+
+// Endpoint pour récupérer les préinscrits
+app.get("/api/preinscrits", async (req, res) => {
+  const currentYear = new Date().getFullYear();
+  const dateRentree = req.query.dateRentrée || `${currentYear}-09-01`; // Utilise la date de rentrée envoyée par le client, ou une valeur par défaut
 
   try {
-    if (!preinscritFile) {
-      console.log("Aucun fichier reçu.");
-      return res.status(400).json({ message: "Aucun fichier reçu." });
-    }
+    // Récupérer tous les étudiants (préinscrits) de la base de données
+    const preinscrits = await Student.find();
 
-    console.log("Fichier reçu :", preinscritFile);
+    // Filtrer les étudiants pour obtenir uniquement ceux qui sont préinscrits
+    const filteredPreinscrits = preinscrits.filter((student) =>
+      isPreinscrit(student.dateDeNaissance, dateRentree)
+    );
 
-    // Convertir le fichier texte en JSON
+    // Renvoie la liste des préinscrits filtrée
+    res.status(200).json(filteredPreinscrits);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des préinscrits :", error);
+    res.status(500).json({ message: "Erreur interne du serveur." });
+  }
+});
+
+// Endpoint pour enregistrer les préinscrits
+app.post("/api/preinscrits", upload.single("preinscrit"), async (req, res) => {
+  console.log(req.file); // Vérifier ce qui est reçu
+
+  if (!req.file) {
+    return res.status(400).json({ message: "Aucun fichier reçu." });
+  }
+
+  try {
+    const preinscritFile = req.file.buffer.toString("utf-8");
+    console.log("Contenu du fichier:", preinscritFile); // Affichez le contenu du fichier
+
     const lines = preinscritFile.split("\n");
-    console.log("Lignes découpées :", lines);
-
     const students = [];
 
+    // Traitement du fichier texte comme avant
     for (const line of lines) {
       const parts = line.trim().split(" ");
-      console.log("Parties découpées de la ligne :", parts);
-
       if (parts.length >= 5) {
         const nom = parts[0];
         const prenom = parts[1];
         const dateDeNaissanceStr = parts.slice(2).join(" ");
 
         try {
-          // Conversion de la date
-          const dateDeNaissance = parse(dateDeNaissanceStr, 'dd MMMM yyyy', new Date(), { locale: fr });
+          const dateDeNaissance = parse(
+            dateDeNaissanceStr,
+            "dd MMMM yyyy",
+            new Date(),
+            { locale: fr }
+          );
 
           if (isValid(dateDeNaissance)) {
             students.push({
@@ -83,22 +120,21 @@ app.post("/api/preinscrit", async (req, res) => {
               prenom,
               dateDeNaissance: dateDeNaissance.toISOString(),
             });
-            console.log(`Étudiant ajouté : ${nom} ${prenom} - Date de naissance : ${dateDeNaissanceStr}`);
           } else {
             console.error(`Date invalide : ${dateDeNaissanceStr}`);
           }
         } catch (dateError) {
-          console.error(`Erreur lors du parsing de la date : ${dateDeNaissanceStr}`, dateError);
+          console.error(
+            `Erreur lors du parsing de la date : ${dateDeNaissanceStr}`,
+            dateError
+          );
         }
       } else {
         console.error(`Ligne incorrecte : ${line}`);
       }
     }
 
-    // Enregistrement des préinscrits dans la collection `students`
-    console.log("Enregistrement des étudiants en cours...");
     const savedPreinscrit = await Student.insertMany(students);
-    console.log("Préinscrits enregistrés :", savedPreinscrit);
 
     res.status(200).json({
       message: "Préinscrits enregistrés avec succès",
@@ -117,7 +153,7 @@ app.post("/api/preinscrit", async (req, res) => {
 app.post("/api/students", async (req, res) => {
   const { students } = req.body;
   const currentYear = new Date().getFullYear();
-  const dateRentrée = req.body.dateRentrée || `${currentYear}-09-01`;
+  const dateRentree = req.body.dateRentree || `${currentYear}-09-01`;
 
   if (!students || students.length === 0) {
     return res.status(400).json({ message: "Aucun élève à enregistrer." });
@@ -139,7 +175,7 @@ app.post("/api/students", async (req, res) => {
 
       const className = getClassForStudent(
         student.dateDeNaissance,
-        dateRentrée
+        dateRentree
       );
       let classCollection = await ClassCollection.findOne({
         classe: className,
@@ -158,31 +194,15 @@ app.post("/api/students", async (req, res) => {
       }
     }
 
-    res
-      .status(200)
-      .json({
-        message: "Élèves enregistrés avec succès.",
-        students: savedStudents,
-      });
+    res.status(200).json({
+      message: "Élèves enregistrés avec succès.",
+      students: savedStudents,
+    });
   } catch (err) {
     console.error(err);
     res
       .status(500)
       .json({ error: "Erreur serveur lors de l'enregistrement des élèves." });
-  }
-});
-
-// Endpoint pour récupérer les élèves par classe
-app.get("/api/classes", async (req, res) => {
-  try {
-    const classes = await ClassCollection.find()
-      .populate("students") // Assure que les IDs dans `students` sont remplacés par leurs documents complets
-      .exec();
-
-    res.status(200).json(classes);
-  } catch (error) {
-    console.error("Erreur lors de la récupération des classes :", error);
-    res.status(500).json({ message: "Erreur interne du serveur." });
   }
 });
 
