@@ -36,6 +36,10 @@ width: 100%;
   z-index: -1;
 }
 
+.avion_1{
+  animation: fly 5s infinite linear;
+}
+
 .etoile_1,
 .etoile_2,
 .etoile_3 {
@@ -48,15 +52,15 @@ width: 100%;
 }
 
 .satelite_1{
-  animation: orbit 4s infinite linear;
+  animation: orbit 20s infinite linear;
 }
 
 .satelite_2 {
-  animation: orbit 5s infinite linear;
+  animation: orbit 25s infinite linear;
 }
 
 .satelite_3 {
-  animation: spine 4.5s infinite linear;
+  animation: spine 15s infinite linear;
 }
 
 .etoile_1 {
@@ -82,7 +86,7 @@ width: 100%;
 
 .etoile_4 {
   position: fixed;
-  top: 20%;
+  top: 25%;
   left: 89%;
   z-index: -1;
 }
@@ -115,6 +119,32 @@ width: 100%;
   z-index: -1;
 }
 
+.avion_1 {
+  position: absolute;
+  top: 5%;
+  left: 75%;
+  z-index: -1;
+}
+
+.fume_1 {
+  position: absolute;
+  top: 13%;
+  left: 70%;
+  z-index: -1;
+}
+
+.fume_2 {
+  position: absolute;
+  top: 15%;
+  left: 65%;
+  z-index: -1;
+}
+.fume_1 {
+  animation: fume 1s infinite 0.5s;
+}
+.fume_2 {
+  animation: fume 1s infinite;
+}
 /* Animation for twinkling */
 @keyframes twinkling {
 
@@ -149,4 +179,41 @@ width: 100%;
   100% {
     transform: rotate(-360deg) translateX(75px) rotate(360deg);
   }
+}
+
+@keyframes fly {
+  0% {
+    transform: translateY(0);
+    
+  }
+
+  50% {
+    transform: translateY(-15px);
+    
+  }
+
+  100% {
+    transform: translateY(0);
+    
+  }
+  
+}
+
+@keyframes fume {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+    
+  }
+
+  50% {
+    transform: translateY(-5px);
+    opacity: 0.5;
+  }
+
+  100% {
+    transform: translateY(0);
+    
+  }
+  
 }
