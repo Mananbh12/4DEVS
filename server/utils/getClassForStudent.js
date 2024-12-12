@@ -1,5 +1,5 @@
-function getClassForStudent(dateDeNaissance, dateRentrée) {
-  const rentréeDate = new Date(dateRentrée);
+function getClassForStudent(dateDeNaissance, dateRentree) {
+  const rentréeDate = new Date(dateRentree);
   const birthDate = new Date(dateDeNaissance);
 
   const ageOnRentrée =

@@ -8,50 +8,18 @@ function App() {
   const [redoublantsFile, setRedoublantsFile] = useState(null); // Nouveau fichier pour les redoublants
   const [data, setData] = useState([]);
   const [classes, setClasses] = useState([]);
-  const [preinscrit, setPreinscrit] = useState([]);
+  const [preinscrits, setPreinscrits] = useState([]);
   const [preinscritFile, setPreinscritFile] = useState(null);
 
   useEffect(() => {
     fetchClasses();
+    fetchPreinscrits();
   }, []);
 
   const addPreinscrit = (e) => {
     const selectedFile = e.target.files[0];
     setPreinscritFile(selectedFile);
     sendPreinscritToBackend(selectedFile);
-  };
-
-  const sendPreinscritToBackend = async (file) => {
-    const reader = new FileReader();
-
-    reader.onload = async (e) => {
-      const fileContent = e.target.result; // Contenu du fichier
-      console.log("Contenu du fichier préinscrit :", fileContent); // Affiche le contenu dans la console
-
-      const preinscrit = fileContent;
-
-      try {
-        const response = await fetch("http://localhost:5000/api/preinscrit", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ preinscrit }),
-        });
-
-        if (response.ok) {
-          alert("Les préinscrits ont été enregistrés.");
-        } else {
-          const errorData = await response.json();
-          alert(`Erreur : ${errorData.message}`);
-        }
-      } catch (error) {
-        console.error("Erreur d'envoi au serveur:", error);
-        alert("Une erreur est survenue.");
-      }
-    };
-
-    reader.readAsText(file); // Lit le fichier comme du texte
   };
 
   // Récupération des classes du backend
@@ -166,6 +134,22 @@ function App() {
   };
 
 
+  // Fonction pour récupérer les préinscrits depuis le backend
+  const fetchPreinscrits = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/api/preinscrits");
+      if (response.ok) {
+        const preinscritsData = await response.json();
+        console.log("Préinscrits récupérés :", preinscritsData); // Debugging
+        setPreinscrits(preinscritsData);
+      } else {
+        console.error("Erreur lors de la récupération des préinscrits");
+      }
+    } catch (error) {
+      console.error("Erreur de connexion au serveur :", error);
+    }
+  };
+
   // Gestion du fichier des élèves
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -246,6 +230,29 @@ function App() {
     }
   };
 
+  const sendPreinscritToBackend = async (file) => {
+    const formData = new FormData();
+    formData.append("preinscrit", file); // Le champ doit être "preinscrit"
+
+    try {
+      const response = await fetch("http://localhost:5000/api/preinscrits", {
+        method: "POST",
+        body: formData, // Envoi de FormData qui contient le fichier
+      });
+
+      if (response.ok) {
+        alert("Les préinscrits ont été enregistrés.");
+        await fetchPreinscrits(); // Met à jour la liste des préinscrits
+      } else {
+        const errorData = await response.json();
+        alert(`Erreur : ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error("Erreur d'envoi au serveur:", error);
+      alert("Une erreur est survenue.");
+    }
+  };
+
   // Envoi des données des élèves au backend
   const sendDataToBackend = async (students) => {
     try {
@@ -259,6 +266,7 @@ function App() {
 
       if (response.ok) {
         alert("Les élèves ont été enregistrés.");
+        await fetchClasses();
       } else {
         const errorData = await response.json();
         alert(`Erreur : ${errorData.message}`);
@@ -308,6 +316,7 @@ function App() {
 
       if (response.ok) {
         alert("Les redoublants ont été validés.");
+        await fetchClasses();
       } else {
         const errorData = await response.json();
         alert(`Erreur : ${errorData.message}`);
@@ -396,13 +405,57 @@ function App() {
           </section>
         </div>
 
-        {/* Tableaux en grille */}
-        <div className="grid grid-cols-3 gap-6 opacity-95">
-          {classes.map((classItem, classIndex) => (
-            <div key={classIndex} className="bg-white p-4 rounded-md shadow-md ">
-              <h3 className="text-xl font-bold mb-2">{classItem.classe}</h3>
-              {classItem.students.length > 0 ? (
-                <table className="w-full border-collapse border border-gray-400 ">
+        {/* Tableaux des classes */}
+        <section>
+          <div className="grid grid-cols-3 gap-6 opacity-95">
+            {classes.map((classItem, classIndex) => (
+              <div
+                key={classIndex}
+                className="bg-white p-4 rounded-md shadow-md "
+              >
+                <h3 className="text-xl font-bold mb-2">{classItem.classe}</h3>
+                {classItem.students.length > 0 ? (
+                  <table className="w-full border-collapse border border-gray-400 ">
+                    <thead>
+                      <tr>
+                        <th className="border border-gray-300 px-4 py-2 bg-gray-100">
+                          Nom
+                        </th>
+                        <th className="border border-gray-300 px-4 py-2 bg-gray-100">
+                          Prénom
+                        </th>
+                        <th className="border border-gray-300 px-4 py-2 bg-gray-100">
+                          Date de naissance
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {classItem.students.map((student, studentIndex) => (
+                        <tr key={studentIndex}>
+                          <td className="border border-gray-300 px-4 py-2">
+                            {student.nom}
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            {student.prenom}
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            {student.dateDeNaissance}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p>Aucun étudiant dans cette classe.</p>
+                )}
+              </div>
+            ))}
+
+            {/* Tableau des préinscrits */}
+            <div className="bg-white p-4 rounded-md shadow-md">
+              <h3 className="text-xl font-bold mb-2">Préinscrits</h3>
+              {preinscrits.length > 0 ? (
+                <table className="w-full border-collapse border border-gray-400">
                   <thead>
                     <tr>
                       <th className="border border-gray-300 px-4 py-2 bg-gray-100">
@@ -417,8 +470,8 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {classItem.students.map((student, studentIndex) => (
-                      <tr key={studentIndex}>
+                    {preinscrits.map((student, index) => (
+                      <tr key={index}>
                         <td className="border border-gray-300 px-4 py-2">
                           {student.nom}
                         </td>
@@ -433,14 +486,15 @@ function App() {
                   </tbody>
                 </table>
               ) : (
-                <p>Aucun étudiant dans cette classe.</p>
+                <p>Aucun préinscrit pour le moment.</p>
               )}
             </div>
-          ))}
-        </div>
+          </div>
+        </section>
       </main>
     </div>
-  );
+        );
+
 }
 
 export default App;
