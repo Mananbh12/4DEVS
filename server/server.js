@@ -10,16 +10,48 @@ const Student = require("./models/Student");
 const ClassCollection = require("./models/ClassCollection");
 const getClassForStudent = require("./utils/getClassForStudent");
 const { fr } = require('date-fns/locale');
+const jwt = require("jsonwebtoken");
+
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+const SECRET_KEY = "votre_clé_secrète"; // Clé utilisée pour signer et vérifier les tokens
+
+// Définir un modèle pour les utilisateurs
+const UserSchema = new mongoose.Schema({
+    username: { type: String, required: true },
+    password: { type: String, required: true },
+});
+
+const User = mongoose.model("User", UserSchema, "users");
+
+// Middleware pour vérifier le token
+const verifyToken = (req, res, next) => {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+
+    if (!token) {
+        return res.status(401).json({ message: "Token manquant !" });
+    }
+
+    try {
+        const payload = jwt.verify(token, SECRET_KEY);
+        req.user = payload;
+        next();
+    } catch (err) {
+        res.status(403).json({ message: "Token invalide !" });
+    }
+};
+
 const corsOptions = {
-  origin: "http://localhost:3000",
+  origin: "http://localhost:3001", // Remplacez par l'origine de votre front-end
   methods: "GET,POST",
   allowedHeaders: "Content-Type",
 };
+app.use(cors(corsOptions));
+
 
 // Connexion à MongoDB
 mongoose
@@ -45,8 +77,40 @@ function getNextClass(currentClass) {
   return index >= 0 && index < classes.length - 1 ? classes[index + 1] : null;
 }
 
+// Route pour authentifier et générer un token
+// Endpoint pour authentifier et générer un token
+app.post("/api/auth", async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+      // Connexion à la base de données
+      await mongoose.connect("mongodb://localhost:27017/4DEVS", {
+          useNewUrlParser: true,
+          useUnifiedTopology: true,
+      });
+
+      // Vérifier si l'utilisateur existe dans la base de données
+      const user = await User.findOne({ username: username })
+      console.log("user : ",user);
+      if (user && user.password === password) {
+          // Générer un token si l'utilisateur est trouvé et que le mot de passe est correct
+          const token = jwt.sign({ username: user.username }, SECRET_KEY, { expiresIn: "1h" });
+          res.json({ token });
+      } else {
+          res.status(401).json({ username, password, user });
+      }
+  } catch (error) {
+      console.error("Erreur lors de la connexion :", error.message);
+      res.status(500).json({ message: "Erreur serveur" });
+  } finally {
+      mongoose.disconnect(); // Déconnecter de la base de données
+  }
+});
+
+
+
 // Endpoint pour enregistrer les préinscrits
-app.post("/api/preinscrit", async (req, res) => {
+app.post("/api/preinscrit", verifyToken, async (req, res) => {
   const preinscritFile = req.body.preinscrit; // Recevez le fichier au format texte
   console.log("Entrée POST");
 
@@ -114,16 +178,23 @@ app.post("/api/preinscrit", async (req, res) => {
 });
 
 // Endpoint pour enregistrer les élèves
-app.post("/api/students", async (req, res) => {
+app.post("/api/students", verifyToken, async (req, res) => {
   const { students } = req.body;
   const currentYear = new Date().getFullYear();
   const dateRentrée = req.body.dateRentrée || `${currentYear}-09-01`;
+
+  console.log("Body:", req.body);
+  console.log("User from token:", req.user); // Ajout pour vérifier le contenu du token
 
   if (!students || students.length === 0) {
     return res.status(400).json({ message: "Aucun élève à enregistrer." });
   }
 
   try {
+    // Connecter à MongoDB avant d'exécuter des opérations
+    await mongoose.connect('mongodb://localhost:27017/mydatabase', { useNewUrlParser: true, useUnifiedTopology: true });
+    console.log('Connexion à MongoDB établie');
+
     const savedStudents = [];
     for (const student of students) {
       const existingStudent = await Student.findOne({
@@ -158,22 +229,20 @@ app.post("/api/students", async (req, res) => {
       }
     }
 
-    res
-      .status(200)
-      .json({
-        message: "Élèves enregistrés avec succès.",
-        students: savedStudents,
-      });
+    res.status(200).json({
+      message: "Élèves enregistrés avec succès.",
+      students: savedStudents,
+    });
   } catch (err) {
-    console.error(err);
-    res
-      .status(500)
-      .json({ error: "Erreur serveur lors de l'enregistrement des élèves." });
+    console.error("Erreur lors de l'enregistrement des élèves:", err);
+    res.status(500).json({ error: "Erreur serveur lors de l'enregistrement des élèves." });
   }
 });
 
+
+
 // Endpoint pour récupérer les élèves par classe
-app.get("/api/classes", async (req, res) => {
+app.get("/api/classes", verifyToken, async (req, res) => {
   try {
     const classes = await ClassCollection.find()
       .populate("students") // Assure que les IDs dans `students` sont remplacés par leurs documents complets
@@ -186,7 +255,7 @@ app.get("/api/classes", async (req, res) => {
   }
 });
 
-app.post("/api/update-year", upload.single("redoublants"), async (req, res) => {
+app.post("/api/update-year", verifyToken, upload.single("redoublants"), async (req, res) => {
   if (!req.file) {
     return res
       .status(400)
@@ -281,7 +350,7 @@ app.post("/api/update-year", upload.single("redoublants"), async (req, res) => {
     });
 });
 
-app.post("/api/validate-redoublants", async (req, res) => {
+app.post("/api/validate-redoublants", verifyToken, async (req, res) => {
   try {
     const redoublants = req.body.redoublants;
 
@@ -338,6 +407,6 @@ app.post("/api/validate-redoublants", async (req, res) => {
 });
 
 // Lancer le serveur
-app.listen(5000, () => {
-  console.log("Serveur démarré sur http://localhost:5000");
+app.listen(3000, () => {
+  console.log("Serveur démarré sur http://localhost:3000");
 });
