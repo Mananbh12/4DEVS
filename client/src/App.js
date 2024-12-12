@@ -65,7 +65,7 @@ function App() {
   const fetchPreinscrits = async () => {
     try {
       const response = await fetch("http://localhost:3000/api/preinscrits", {
-        method: "GET", // Le type de la méthode est maintenant GET pour une récupération de données, non POST.
+        method: "GET", 
         headers: {
             'Authorization': `Bearer ${token}`,
             "Content-Type": "application/json"
@@ -74,10 +74,7 @@ function App() {
 
       if (response.ok) {
         const preinscritsData = await response.json();
-        console.log("Préinscrits récupérés :", preinscritsData); // Debugging
         setPreinscrits(preinscritsData);
-      } else {
-        console.error("Erreur lors de la récupération des préinscrits");
       }
     } catch (error) {
       console.error("Erreur de connexion au serveur :", error);
