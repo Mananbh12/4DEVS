@@ -13,9 +13,11 @@ function Auth({ onLoginSuccess }) {
 
       const response = await fetch("http://localhost:3000/api/auth", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: 
+          {
+            'Authorization': `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
         body: JSON.stringify({ username: email, password: password }),
       });
 
@@ -37,6 +39,9 @@ function Auth({ onLoginSuccess }) {
       alert("Une erreur est survenue lors de la tentative de connexion.");
     }
   };
+
+  const role = localStorage.getItem("role");
+  const token = localStorage.getItem("token");
 
   return (
     <div className="min-h-screen">
