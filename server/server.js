@@ -192,7 +192,7 @@ app.post("/api/students", verifyToken, async (req, res) => {
 
   try {
     // Connecter à MongoDB avant d'exécuter des opérations
-    await mongoose.connect('mongodb://localhost:27017/mydatabase', { useNewUrlParser: true, useUnifiedTopology: true });
+    await mongoose.connect('mongodb://localhost:27017/4DEVS', { useNewUrlParser: true, useUnifiedTopology: true });
     console.log('Connexion à MongoDB établie');
 
     const savedStudents = [];
