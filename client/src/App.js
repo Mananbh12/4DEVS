@@ -16,11 +16,6 @@ function App() {
     fetchPreinscrits();
   }, []);
 
-  const addPreinscrit = (e) => {
-    const selectedFile = e.target.files[0];
-    setPreinscritFile(selectedFile);
-    sendPreinscritToBackend(selectedFile);
-  };
 
   // Récupération des classes du backend
   const fetchClasses = async () => {
@@ -58,6 +53,12 @@ function App() {
     } catch (error) {
         console.error("Erreur lors de la connexion au serveur :", error);
     }
+};
+
+const addPreinscrit = (e) => {
+  const selectedFile = e.target.files[0];
+  setPreinscritFile(selectedFile);
+  sendPreinscritToBackend(selectedFile);
 };
 
 
@@ -162,33 +163,32 @@ function App() {
     }
   };
 
+
   const sendPreinscritToBackend = async (file) => {
     const formData = new FormData();
     formData.append("preinscrit", file); // Le champ doit être "preinscrit"
 
     try {
-      const response = await fetch("http://localhost:3000/api/preinscrits", {
-        method: "POST",
-        body: formData, // Envoi de FormData qui contient le fichier
-        headers: 
-          {
-            'Authorization': `Bearer ${token}`,
-            "Content-Type": "application/json"
-          },
-      });
+        const response = await fetch("http://localhost:3000/api/preinscrits", {
+            method: "POST",
+            headers: {
+                'Authorization': `Bearer ${token}`, // Assurez-vous que `token` est défini dans le contexte.
+            },
+            body: formData,
+        });
 
-      if (response.ok) {
-        alert("Les préinscrits ont été enregistrés.");
-        await fetchPreinscrits(); // Met à jour la liste des préinscrits
-      } else {
-        const errorData = await response.json();
-        alert(`Erreur : ${errorData.message}`);
-      }
+        if (response.ok) {
+            alert("Les préinscrits ont été enregistrés.");
+            await fetchPreinscrits(); // Met à jour la liste des préinscrits
+        } else {
+            const errorData = await response.json();
+            alert(`Erreur : ${errorData.message}`);
+        }
     } catch (error) {
-      console.error("Erreur d'envoi au serveur:", error);
-      alert("Une erreur est survenue.");
+        console.error("Erreur d'envoi au serveur:", error);
+        alert("Une erreur est survenue.");
     }
-  };
+};
 
   // Envoi des données des élèves au backend
   const sendDataToBackend = async (students) => {
@@ -364,6 +364,23 @@ function App() {
 
 
 
+  // Fonction pour exporter une classe au format pdf classe-JJ-MM-AAAA.pdf
+  const exportClasse = (classe, students) => async () => {
+    const pdf = new jsPDF();
+    pdf.text(`Classe : ${classe}`, 10, 10);
+    let yPosition = 20;
+    students.forEach((student) => {
+      pdf.text(
+        `${student.prenom} ${student.nom} - ${student.dateDeNaissance}`,
+        15,
+        yPosition
+      );
+      yPosition += 10;
+    });
+    pdf.save(`classe-${classe}-${new Date().toLocaleDateString()}.pdf`);
+  }
+
+
   return (
     <div className="min-h-screen">
       <header className=" text-white p-10 text-center">
@@ -444,14 +461,57 @@ function App() {
         <section>
           <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
             {classes.map((classItem, classIndex) => (
-              <div
-                key={classIndex}
-                className="bg-black p-4 rounded-md shadow-md bg-opacity-30 overflow-auto custom-scrollbar max-h-96"
-              >
-                <h3 className=" text-white text-xl font-bold mb-2">{classItem.classe}</h3>
-                {classItem.students.length > 0 ? (
-                  <table className=" min-w-full border-collapse border-gray-400 ">
-                    <thead className=" z-10">
+              <div key={classIndex} className=" bg-black p-4 rounded-md shadow-md bg-opacity-30 overflow-auto custom-scrollbar max-h-96">
+                <div className=" flex justify-between items-center mb-4 overflow-auto custom-scrollbar">
+                  <h3 className=" text-white text-xl font-bold mb-2">{classItem.classe}</h3>
+                  <button className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md shadow-md hover:bg-blue-700 mb-2" onClick={exportClasse(classItem.classe,classItem.students)}>Exporter Classe</button>
+                </div>
+                <div className="overflow-auto custom-scrollbar">
+                  {classItem.students.length > 0 ? (
+                    <table className=" min-w-full border-collapse border-gray-400 ">
+                      <thead className="z-10">
+                        <tr>
+                          <th className="border border-gray-300 px-4 py-2 bg-gray-100">
+                            Nom
+                          </th>
+                          <th className="border border-gray-300 px-4 py-2 bg-gray-100">
+                            Prénom
+                          </th>
+                          <th className="border border-gray-300 px-4 py-2 bg-gray-100">
+                            Date de naissance
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="">
+                        {classItem.students.map((student, studentIndex) => (
+                          <tr key={studentIndex}>
+                            <td className="text-white border border-gray-300 px-4 py-2">
+                              {student.nom}
+                            </td>
+                            <td className="text-white border border-gray-300 px-4 py-2">
+                              {student.prenom}
+                            </td>
+                            <td className="text-white border border-gray-300 px-4 py-2">
+                              {student.dateDeNaissance}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (<p>Aucun étudiant dans cette classe.</p>)
+                  }
+                </div>
+              </div>
+            ))}
+
+{preinscrits.length > 0 && (
+              <div className="bg-black p-4 rounded-md shadow-md bg-opacity-30 overflow-auto custom-scrollbar max-h-96">
+                <div className="flex justify-between items-center mb-4 overflow-auto custom-scrollbar">
+                  <h3 className="text-white text-xl font-bold mb-2">Préinscrits</h3>
+                </div>
+                <div className="overflow-auto custom-scrollbar">
+                  <table className="min-w-full border-collapse border-gray-400">
+                    <thead>
                       <tr>
                         <th className="border border-gray-300 px-4 py-2 bg-gray-100">
                           Nom
@@ -465,8 +525,8 @@ function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {classItem.students.map((student, studentIndex) => (
-                        <tr key={studentIndex}>
+                      {preinscrits.map((student, index) => (
+                        <tr key={index}>
                           <td className="text-white border border-gray-300 px-4 py-2">
                             {student.nom}
                           </td>
@@ -480,52 +540,12 @@ function App() {
                       ))}
                     </tbody>
                   </table>
-                ) : (
-                  <p>Aucun étudiant dans cette classe.</p>
-                )}
+                </div>
               </div>
-            ))}
-
-            {/* Tableau des préinscrits */}
-            <div className="bg-white p-4 rounded-md shadow-md">
-              <h3 className="text-xl font-bold mb-2">Préinscrits</h3>
-              {preinscrits.length > 0 ? (
-                <table className="w-full border-collapse border border-gray-400">
-                  <thead>
-                    <tr>
-                      <th className="border border-gray-300 px-4 py-2 bg-gray-100">
-                        Nom
-                      </th>
-                      <th className="border border-gray-300 px-4 py-2 bg-gray-100">
-                        Prénom
-                      </th>
-                      <th className="border border-gray-300 px-4 py-2 bg-gray-100">
-                        Date de naissance
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preinscrits.map((student, index) => (
-                      <tr key={index}>
-                        <td className="border border-gray-300 px-4 py-2">
-                          {student.nom}
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2">
-                          {student.prenom}
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2">
-                          {student.dateDeNaissance}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p>Aucun préinscrit pour le moment.</p>
-              )}
-            </div>
+            )}
           </div>
         </section>
+        
       </main>
     </div>
         );
