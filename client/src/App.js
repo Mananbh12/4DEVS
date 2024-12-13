@@ -389,7 +389,7 @@ const addPreinscrit = (e) => {
           Importez et gérez les données de vos élèves.
         </p>
         <button onClick={archiveYear} className="cursor-pointer bg-red-600 text-white font-medium py-2 px-4 rounded-md shadow-md hover:bg-red-700 mt-4">
-          Archiver l'année scolaire
+          Récupérer l'archive de l'année scolaire
         </button>
       </header>
 
@@ -436,7 +436,7 @@ const addPreinscrit = (e) => {
               Choisir un fichier
             </label>
           </section>
-
+          {/*
           <section className="flex-1 bg-white p-6 rounded-md shadow-md bg-opacity-75">
             <h2 className="text-2xl font-semibold mb-4">
               Indiquer les redoublants
@@ -455,6 +455,7 @@ const addPreinscrit = (e) => {
               Choisir un fichier
             </label>
           </section>
+          */}
         </div>
 
         {/* Tableaux des classes */}
@@ -464,7 +465,7 @@ const addPreinscrit = (e) => {
               <div key={classIndex} className=" bg-black p-4 rounded-md shadow-md bg-opacity-30 overflow-auto custom-scrollbar max-h-96">
                 <div className=" flex justify-between items-center mb-4 overflow-auto custom-scrollbar">
                   <h3 className=" text-white text-xl font-bold mb-2">{classItem.classe}</h3>
-                  <button className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md shadow-md hover:bg-blue-700 mb-2" onClick={exportClasse(classItem.classe,classItem.students)}>Exporter Classe</button>
+                  <button className="bg-blue-600 text-white font-medium py-2 px-4 rounded-md shadow-md hover:bg-blue-700 mb-2" onClick={exportClasse(classItem.classe,classItem.students)}>Exporter</button>
                 </div>
                 <div className="overflow-auto custom-scrollbar">
                   {classItem.students.length > 0 ? (
