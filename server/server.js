@@ -326,6 +326,7 @@ app.post("/api/update-classes", async (req, res) => {
   }
 });
 
+
 // Lancer le serveur
 app.listen(5000, () => {
   console.log("Serveur démarré sur http://localhost:5000");
