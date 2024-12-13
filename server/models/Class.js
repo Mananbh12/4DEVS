@@ -5,6 +5,4 @@ const classSchema = new mongoose.Schema({
   students: [{ type: mongoose.Schema.Types.ObjectId, ref: "Student" }],
 });
 
-const ClassCollection = mongoose.model("ClassCollection", classSchema); // Une collection par classe
-
-module.exports = ClassCollection;
+module.exports = mongoose.model("Class", classSchema);

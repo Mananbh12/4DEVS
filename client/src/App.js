@@ -195,53 +195,27 @@ function App() {
     }
   };
 
-  // Fonction pour envoyer le fichier à Multer (backend)
-  const sendRedoublantsFileToBackend = async (selectedFile) => {
-    const formData = new FormData();
-    formData.append("redoublants", selectedFile);
-
+  // Fonction pour envoyer les redoublants au backend
+  const sendRedoublantsToBackend = async (redoublants) => {
     try {
-      const response = await fetch("http://localhost:5000/api/update-year", {
+      const response = await fetch("http://localhost:5000/api/update-classes", {
         method: "POST",
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ redoublants }), // Liste des redoublants (_id)
       });
 
       if (response.ok) {
-        alert("Les redoublants ont été enregistrés et l'année mise à jour.");
+        alert("Mise à jour des classes effectuée avec succès.");
+        await fetchClasses(); // Met à jour l'affichage des classes
       } else {
         const errorData = await response.json();
         alert(`Erreur : ${errorData.message}`);
       }
     } catch (error) {
-      console.error("Erreur d'envoi au serveur:", error);
-      alert("Une erreur est survenue dans la route api/update-year.");
-    }
-  };
-
-  // Envoi des données formatées des redoublants au backend
-  const sendRedoublantsToBackend = async (redoublants) => {
-    try {
-      const response = await fetch(
-        "http://localhost:5000/api/validate-redoublants",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ redoublants }), // Conversion en JSON avant l'envoi
-        }
-      );
-
-      if (response.ok) {
-        alert("Les redoublants ont été validés.");
-        await fetchClasses();
-      } else {
-        const errorData = await response.json();
-        alert(`Erreur : ${errorData.message}`);
-      }
-    } catch (error) {
-      console.error("Erreur d'envoi des redoublants:", error);
-      alert("Une erreur est survenue avec la route validate-redoublants.");
+      console.error("Erreur d'envoi des redoublants :", error);
+      alert("Une erreur est survenue lors de la mise à jour des classes.");
     }
   };
 
@@ -352,7 +326,12 @@ function App() {
                             {student.prenom}
                           </td>
                           <td className="border border-gray-300 px-4 py-2">
-                            {student.dateDeNaissance}
+                            {student.dateDeNaissance
+                              ? format(
+                                  new Date(student.dateDeNaissance),
+                                  "dd/MM/yyyy"
+                                )
+                              : "Date non valide"}
                           </td>
                         </tr>
                       ))}
@@ -392,7 +371,12 @@ function App() {
                           {student.prenom}
                         </td>
                         <td className="border border-gray-300 px-4 py-2">
-                          {student.dateDeNaissance}
+                          {student.dateDeNaissance
+                            ? format(
+                                new Date(student.dateDeNaissance),
+                                "dd/MM/yyyy"
+                              )
+                            : "Date non valide"}
                         </td>
                       </tr>
                     ))}
