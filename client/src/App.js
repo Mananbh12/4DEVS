@@ -398,7 +398,7 @@ const addPreinscrit = (e) => {
         
 
         {/* Encadrés côte à côte */}
-        <div className="flex justify-between gap-6 mb-10">
+        <div className="flex justify-items-stretch gap-6 mb-10 ">
 
           <section className="flex-1 bg-white p-6 rounded-md shadow-md bg-opacity-75">
             <h2 className="text-2xl font-semibold mb-4">
@@ -415,25 +415,25 @@ const addPreinscrit = (e) => {
               htmlFor="preinscrit-upload"
               className="cursor-pointer bg-blue-600 text-white font-medium py-2 px-4 rounded-md shadow-md hover:bg-blue-700 whitespace-nowrap"
             >
-              Choisir un fichier
+              Choisir un fichier txt
             </label>
           </section>
           <section className="flex-1 bg-white p-6 rounded-md shadow-md bg-opacity-75">
-            <h2 className="text-2xl font-semibold mb-4">
-              Importer un fichier CSV
+            <h2 className="text-2xl font-semibold mb-4 whitespace-nowrap">
+              Importer les élèves
             </h2>
             <input
               type="file"
               accept=".csv"
               onChange={handleFileChange}
-              className="hidden"
+              className="hidden inset-x-0 bottom-0"
               id="file-upload"
             />
             <label
               htmlFor="file-upload"
-              className="whitespace-nowrap cursor-pointer bg-blue-600 text-white font-medium py-2 px-4 rounded-md shadow-md hover:bg-blue-700"
+              className="whitespace-nowrap inset-x-0 bottom-0 cursor-pointer bg-blue-600 text-white font-medium py-2 px-4 rounded-md shadow-md hover:bg-blue-700"
             >
-              Choisir un fichier
+              Choisir un fichier csv
             </label>
           </section>
           {/*

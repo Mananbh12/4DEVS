@@ -54,7 +54,7 @@ function Auth({ onLoginSuccess }) {
             <div className="bg-black p-8 rounded shadow-md w-80 bg-opacity-20">
                 <input
                 type="text"
-                placeholder="identifiant"
+                placeholder="Identifiant"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"

@@ -1,7 +1,6 @@
 {
-  "name": "server",
+  "name": "fullstack-project",
   "version": "1.0.0",
-  "main": "index.js",
   "license": "MIT",
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -13,10 +12,20 @@
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^2.5.2",
     "mongoose": "^8.8.4",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "react-scripts": "^5.0.0"
   },
   "scripts": {
-    "start": "node index.js",
-    "build": "echo 'No build step required for a simple Node.js app.'"
+    "start": "node server/index.js", 
+    "client": "npm run start --prefix client", 
+    "dev": "concurrently \"npm run start\" \"npm run client\"",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "devDependencies": {
+    "concurrently": "^7.0.0"
   }
 }
